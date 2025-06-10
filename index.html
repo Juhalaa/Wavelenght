@@ -1,187 +1,96 @@
 <!DOCTYPE html>
 <html lang="fi">
 <head>
-  <meta charset="UTF-8" />
-  <title>Wavelength Moninpeli</title>
+  <meta charset="UTF-8">
+  <title>Wavelength</title>
   <style>
     body {
       margin: 0; padding: 0;
       font-family: 'Segoe UI', sans-serif;
       background: radial-gradient(circle at top, #8ec5fc 0%, #e0c3fc 100%);
+      display: flex; justify-content: center; align-items: center;
       min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
     }
     .container {
-      background: white;
+      background: #fff;
+      padding: 30px;
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-      padding: 30px;
+      width: 90%;
       max-width: 700px;
-      width: 100%;
+    }
+    h1, h2, h3 {
       text-align: center;
+    }
+    button, input, textarea {
+      display: block;
+      margin: 10px auto;
+      padding: 10px;
+      font-size: 1rem;
     }
     button {
       background: linear-gradient(90deg, #ff8a00, #e52e71);
-      color: white;
-      padding: 10px 20px;
       border: none;
+      color: white;
       border-radius: 12px;
       cursor: pointer;
-      font-size: 1rem;
       transition: background 0.3s;
-      margin-top: 15px;
     }
     button:hover {
       background: linear-gradient(90deg, #e52e71, #ff8a00);
     }
-    input {
-      padding: 10px;
-      width: 70%;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-      margin-top: 15px;
+    .hidden {
+      display: none;
     }
-    ul {
-      list-style: none; padding: 0; margin-top: 10px; text-align: left;
-      max-height: 150px; overflow-y: auto;
+    .player-list {
+      list-style: none;
+      padding: 0;
+      text-align: left;
+      max-height: 150px;
+      overflow-y: auto;
     }
-    li {
-      margin: 5px 0; font-weight: 600;
+    .player-list li {
+      font-weight: bold;
     }
     #countdown {
       font-size: 3rem;
       font-weight: bold;
-      margin: 20px 0;
+      text-align: center;
       color: #e52e71;
     }
-    .hidden { display: none; }
+    #category-box, #number-box {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 1.2rem;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-
-    <!-- Liity näyttö -->
     <div id="join-screen">
       <h2>Liity Wavelength-peliin</h2>
       <input type="text" id="player-name" placeholder="Kirjoita nimesi" />
-      <br/>
-      <button onclick="joinGame()">Liity</button>
-
-      <h3>Liittyneet pelaajat:</h3>
-      <ul id="players-list"></ul>
-
+      <button onclick="joinGame()">Liity peliin</button>
+      <ul id="players-list" class="player-list"></ul>
       <button id="start-game-btn" class="hidden" onclick="startCountdown()">Aloita peli</button>
     </div>
 
-    <!-- Odotustila jos peli jo käynnissä -->
-    <div id="wait-screen" class="hidden">
-      <h2>Peli on jo käynnissä</h2>
-      <p>Odota seuraavaa kierrosta...</p>
-    </div>
-
-    <!-- Lähtölaskenta -->
     <div id="countdown-screen" class="hidden">
       <div id="countdown">3</div>
-      <div>Peli alkaa!</div>
+      <p>Peli alkaa pian...</p>
     </div>
 
-    <!-- Itse peli -->
     <div id="game-screen" class="hidden">
       <h1>Wavelength</h1>
-      <p>Tässä on peli käynnissä...</p>
-      <button onclick="endGame()">Lopeta peli</button>
+      <div id="role-info"></div>
+      <div id="category-box"></div>
+      <div id="number-box"></div>
+      <div id="hint-area"></div>
+      <div id="guess-area"></div>
+      <button id="next-round-btn" class="hidden" onclick="startNewRound()">Seuraava kierros</button>
     </div>
-
   </div>
 
-<script>
-  const players = [];
-  let gameStarted = false;
-  let currentPlayer = null;
-
-  const playersList = document.getElementById("players-list");
-  const startGameBtn = document.getElementById("start-game-btn");
-
-  function joinGame() {
-    const input = document.getElementById("player-name");
-    const name = input.value.trim();
-
-    if (!name) {
-      alert("Kirjoita nimesi!");
-      return;
-    }
-    if (players.includes(name)) {
-      alert("Nimi on jo käytössä.");
-      return;
-    }
-
-    currentPlayer = name;
-
-    if (gameStarted) {
-      // Jos peli on jo käynnissä
-      document.getElementById("join-screen").classList.add("hidden");
-      document.getElementById("wait-screen").classList.remove("hidden");
-      return;
-    }
-
-    players.push(name);
-    input.value = "";
-    renderPlayers();
-    checkStartButton();
-  }
-
-  function renderPlayers() {
-    playersList.innerHTML = "";
-    players.forEach((p, i) => {
-      const li = document.createElement("li");
-      li.textContent = p + (i === 0 ? " (host)" : "");
-      playersList.appendChild(li);
-    });
-  }
-
-  function checkStartButton() {
-    // Näytä start-nappi aina, jos liittynyt vähintään 1 pelaaja
-    if (players.length >= 1) {
-      startGameBtn.classList.remove("hidden");
-    } else {
-      startGameBtn.classList.add("hidden");
-    }
-  }
-
-  function startCountdown() {
-    gameStarted = true;
-    document.getElementById("join-screen").classList.add("hidden");
-    document.getElementById("countdown-screen").classList.remove("hidden");
-
-    let count = 3;
-    const countdownEl = document.getElementById("countdown");
-    countdownEl.textContent = count;
-
-    const interval = setInterval(() => {
-      count--;
-      if (count === 0) {
-        clearInterval(interval);
-        document.getElementById("countdown-screen").classList.add("hidden");
-        document.getElementById("game-screen").classList.remove("hidden");
-        startGame();
-      } else {
-        countdownEl.textContent = count;
-      }
-    }, 1000);
-  }
-
-  function startGame() {
-    console.log("Peli alkaa:", players);
-  }
-
-  function endGame() {
-    gameStarted = false;
-    document.getElementById("game-screen").classList.add("hidden");
-    document.getElementById("join-screen").classList.remove("hidden");
-    renderPlayers();
-    checkStartButton();
-  }
-</script>
+  <script src="wavelength_logic.js"></script>
 </body>
 </html>
