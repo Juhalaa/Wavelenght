@@ -55,13 +55,15 @@
       margin: 20px 0;
       color: #e52e71;
     }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="container">
 
+    <!-- Liity näyttö -->
     <div id="join-screen">
-      <h2>Liity peliin</h2>
+      <h2>Liity Wavelength-peliin</h2>
       <input type="text" id="player-name" placeholder="Kirjoita nimesi" />
       <br/>
       <button onclick="joinGame()">Liity</button>
@@ -72,28 +74,39 @@
       <button id="start-game-btn" class="hidden" onclick="startCountdown()">Aloita peli</button>
     </div>
 
+    <!-- Odotustila jos peli jo käynnissä -->
+    <div id="wait-screen" class="hidden">
+      <h2>Peli on jo käynnissä</h2>
+      <p>Odota seuraavaa kierrosta...</p>
+    </div>
+
+    <!-- Lähtölaskenta -->
     <div id="countdown-screen" class="hidden">
       <div id="countdown">3</div>
       <div>Peli alkaa!</div>
     </div>
 
+    <!-- Itse peli -->
     <div id="game-screen" class="hidden">
-      <h1>Wavelength - Peli käynnissä</h1>
+      <h1>Wavelength</h1>
       <p>Tässä on peli käynnissä...</p>
+      <button onclick="endGame()">Lopeta peli</button>
     </div>
 
   </div>
 
 <script>
   const players = [];
+  let gameStarted = false;
+  let currentPlayer = null;
+
   const playersList = document.getElementById("players-list");
   const startGameBtn = document.getElementById("start-game-btn");
-
-  let gameStarted = false;
 
   function joinGame() {
     const input = document.getElementById("player-name");
     const name = input.value.trim();
+
     if (!name) {
       alert("Kirjoita nimesi!");
       return;
@@ -102,6 +115,16 @@
       alert("Nimi on jo käytössä.");
       return;
     }
+
+    currentPlayer = name;
+
+    if (gameStarted) {
+      // Jos peli on jo käynnissä
+      document.getElementById("join-screen").classList.add("hidden");
+      document.getElementById("wait-screen").classList.remove("hidden");
+      return;
+    }
+
     players.push(name);
     input.value = "";
     renderPlayers();
@@ -118,7 +141,8 @@
   }
 
   function checkStartButton() {
-    if (players.length >= 1 && !gameStarted) {
+    // Näytä start-nappi aina, jos liittynyt vähintään 1 pelaaja
+    if (players.length >= 1) {
       startGameBtn.classList.remove("hidden");
     } else {
       startGameBtn.classList.add("hidden");
@@ -126,7 +150,6 @@
   }
 
   function startCountdown() {
-    if (gameStarted) return;
     gameStarted = true;
     document.getElementById("join-screen").classList.add("hidden");
     document.getElementById("countdown-screen").classList.remove("hidden");
@@ -149,8 +172,15 @@
   }
 
   function startGame() {
-    console.log("Peli käynnistyy pelaajilla:", players);
-    // Pelin logiikka alkaa tässä
+    console.log("Peli alkaa:", players);
+  }
+
+  function endGame() {
+    gameStarted = false;
+    document.getElementById("game-screen").classList.add("hidden");
+    document.getElementById("join-screen").classList.remove("hidden");
+    renderPlayers();
+    checkStartButton();
   }
 </script>
 </body>
