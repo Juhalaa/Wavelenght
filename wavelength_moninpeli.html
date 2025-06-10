@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <title>Wavelength Moninpeli</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: radial-gradient(circle at top, #8ec5fc 0%, #e0c3fc 100%);
+      margin: 0; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 700px;
+    }
+    h1, h2, h3 { text-align: center; }
+    button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background: linear-gradient(to right, #ff8a00, #e52e71);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    #countdown {
+      font-size: 3rem;
+      text-align: center;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Wavelength - Moninpeli</h1>
+    <div id="waiting-room">
+      <h2>Odotetaan pelaajia...</h2>
+      <p id="player-list"></p>
+      <p><strong>Host:</strong> <span id="host-name">-</span></p>
+      <button id="start-btn" style="display:none" onclick="startGame()">Aloita peli</button>
+    </div>
+    <div id="countdown">3</div>
+    <!-- Pelilogiikka tulisi tähän -->
+  </div>
+
+<script>
+let players = [];
+let isHost = false;
+
+function simulateJoin(playerName) {
+  players.push(playerName);
+  if (players.length === 1) {
+    isHost = true;
+    document.getElementById("host-name").innerText = playerName + " (host)";
+    document.getElementById("start-btn").style.display = "inline-block";
+  }
+  updatePlayerList();
+}
+
+function updatePlayerList() {
+  document.getElementById("player-list").innerText = players.join(", ");
+}
+
+function startGame() {
+  document.getElementById("waiting-room").style.display = "none";
+  const cd = document.getElementById("countdown");
+  cd.style.display = "block";
+  let count = 3;
+  const interval = setInterval(() => {
+    cd.innerText = count;
+    count--;
+    if (count < 0) {
+      clearInterval(interval);
+      cd.style.display = "none";
+      alert("Peli alkaa!"); // Placeholder
+    }
+  }, 1000);
+}
+
+// Simuloi pelaajia testimielessä
+simulateJoin("Mikko");
+simulateJoin("Laura");
+simulateJoin("Salla");
+</script>
+</body>
+</html>
