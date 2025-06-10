@@ -79,7 +79,6 @@
 
     <div id="game-screen" class="hidden">
       <h1>Wavelength - Peli käynnissä</h1>
-      <!-- Pelin sisältö tähän -->
       <p>Tässä on peli käynnissä...</p>
     </div>
 
@@ -93,10 +92,6 @@
   let gameStarted = false;
 
   function joinGame() {
-    if(gameStarted) {
-      alert("Peli on jo käynnissä, odota seuraavaa kierrosta.");
-      return;
-    }
     const input = document.getElementById("player-name");
     const name = input.value.trim();
     if (!name) {
@@ -131,8 +126,8 @@
   }
 
   function startCountdown() {
+    if (gameStarted) return;
     gameStarted = true;
-    startGameBtn.classList.add("hidden");
     document.getElementById("join-screen").classList.add("hidden");
     document.getElementById("countdown-screen").classList.remove("hidden");
 
@@ -144,10 +139,9 @@
       count--;
       if (count === 0) {
         clearInterval(interval);
-        // Siirrytään pelinäkymään
         document.getElementById("countdown-screen").classList.add("hidden");
         document.getElementById("game-screen").classList.remove("hidden");
-        startGame(); // käynnistä pelin logiikka
+        startGame();
       } else {
         countdownEl.textContent = count;
       }
@@ -156,7 +150,7 @@
 
   function startGame() {
     console.log("Peli käynnistyy pelaajilla:", players);
-    // Tässä voit laittaa pelin logiikan käynnistyksen
+    // Pelin logiikka alkaa tässä
   }
 </script>
 </body>
