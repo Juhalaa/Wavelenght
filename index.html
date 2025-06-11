@@ -74,14 +74,13 @@
 
     <div id="countdown-screen" class="hidden">
       <div id="countdown">3</div>
-      <div>Lähtölaskenta alkaa!</div>
+      <div>Peli alkaa!</div>
     </div>
 
     <div id="game-screen" class="hidden">
       <h1>Wavelength - Peli käynnissä</h1>
       <div id="game-content">
-        <!-- Tähän pelinäkymän sisältö -->
-        <p>Peli alkoi onnistuneesti! Tässä pelinäkymä jatkuu...</p>
+        <!-- Pelin sisältö tähän -->
       </div>
     </div>
 
@@ -119,6 +118,7 @@
   }
 
   function checkStartButton() {
+    // Salli aloittaa jo yhdellä pelaajalla
     if (players.length >= 1) {
       startGameBtn.classList.remove("hidden");
     } else {
@@ -137,19 +137,22 @@
 
     const interval = setInterval(() => {
       count--;
-      countdownEl.textContent = count;
       if (count === 0) {
         clearInterval(interval);
+        // Piilota lähtölaskenta ja näytä pelinäkymä
         document.getElementById("countdown-screen").classList.add("hidden");
         document.getElementById("game-screen").classList.remove("hidden");
-        startGame();
+        startGame(); // käynnistä pelin logiikka
+      } else {
+        countdownEl.textContent = count;
       }
     }, 1000);
   }
 
   function startGame() {
+    const gameContent = document.getElementById("game-content");
+    gameContent.innerHTML = "<p>Peli alkoi! Tässä voi nyt tehdä pelilogiikan.</p>";
     console.log("Peli käynnistyy pelaajilla:", players);
-    // Lisää pelin varsinainen logiikka tähän myöhemmin
   }
 </script>
 </body>
