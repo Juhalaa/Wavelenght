@@ -1,219 +1,147 @@
-<!DOCTYPE html>
-<html lang="fi">
-<head>
-  <meta charset="UTF-8" />
-  <title>Wavelength</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #8ec5fc, #e0c3fc);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    .container {
-      background: white;
-      padding: 20px;
-      border-radius: 20px;
-      max-width: 500px;
-      width: 100%;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-    }
-    h2, h3 {
-      text-align: center;
-    }
-    input, button, select {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: linear-gradient(90deg, #ff8a00, #e52e71);
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      opacity: 0.9;
-    }
-    .hidden {
-      display: none;
-    }
-    .player-list, .hint-list, .leaderboard {
-      list-style: none;
-      padding: 0;
-    }
-    .player-list li, .hint-list li, .leaderboard li {
-      padding: 5px;
-      border-bottom: 1px solid #ddd;
-    }
-    .highlight {
-      font-weight: bold;
-      color: #e52e71;
-    }
-  </style>
-</head>
-<body>
-  <div class="container" id="app">
-    <!-- Kaikki näkymät käsitellään JavaScriptillä -->
-  </div>
+// Tämä on alkuversio Wavelength-tyyppisestä moninpelistä käyttäen Socket.IO:ta
+// Backend-puoli Node.js + Express + Socket.IO vaaditaan toimiakseen
+// Tämä tiedosto sisältää frontend-logiikan (index.html + client.js) ja palvelinpuolen alustuksen (server.js)
 
-  <script>
-    // Koko peli tallennetaan yhteen olioon (data + logiikka)
-    const state = {
-      players: [],
-      host: null,
-      screen: 'join',
-      currentRound: null,
-      hints: {},
-      points: {},
-      maxPoints: 30,
-      categories: [
-        "Autot", "Eläimet", "Lomakohteet", "Ruokalajit", "Hajuvedet",
-        "Värit", "Kännykät", "Kaupungit", "Maat", "Ammatit",
-        "Brändit", "Säät", "Tuntemukset", "Internet-meemit", "Vuodenajat",
-        "TV-sarjat", "Joukkueet", "Tapahtumat", "Luonteenpiirteet", "Tuoksut"
-      ],
-      get otherPlayers() {
-        return this.players.filter(p => p !== this.currentRound?.guesser);
-      }
-    };
+// === server.js ===
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-    const app = document.getElementById('app');
+const PORT = process.env.PORT || 3000;
 
-    function render() {
-      const { screen, players, host, currentRound, hints, points, maxPoints } = state;
+let players = [];
+let gameState = {
+  started: false,
+  round: 0,
+  maxPoints: 30,
+  targetNumber: null,
+  category: null,
+  clues: {},
+  guess: null,
+  scores: {},
+  hostId: null,
+  guesserId: null,
+  leaderboardVisible: false
+};
 
-      if (screen === 'join') {
-        app.innerHTML = `
-          <h2>Liity peliin</h2>
-          <input id="nameInput" placeholder="Kirjoita nimesi" />
-          <button onclick="join()">Liity</button>
-          <h3>Pelaajat</h3>
-          <ul class="player-list">
-            ${players.map(p => `<li>${p}${p === host ? ' (host)' : ''}</li>`).join('')}
-          </ul>
-          ${players[0] === state.you ? '<button onclick="startGame()">Aloita peli</button>' : ''}
-        `;
-      } else if (screen === 'hint') {
-        const category = currentRound.category;
-        const number = currentRound.number;
-        app.innerHTML = `
-          <h2>Kategoria: <span class="highlight">${category}</span></h2>
-          <h3>Anna vihje numerolle <span class="highlight" style="font-size: 1.5em;">${number}</span></h3>
-          <input id="hintInput" placeholder="Kirjoita vihjeesi" />
-          <button onclick="submitHint()">Lähetä vihje</button>
-        `;
-      } else if (screen === 'guess') {
-        app.innerHTML = `
-          <h2>Arvaa numero!</h2>
-          <ul class="hint-list">
-            ${Object.entries(hints).map(([name, hint]) => `<li><strong>${name}:</strong> ${hint}</li>`).join('')}
-          </ul>
-          <input id="guessInput" type="number" min="0" max="10" placeholder="Arvauksesi (0-10)" />
-          <button onclick="submitGuess()">Arvaa</button>
-        `;
-      } else if (screen === 'result') {
-        const correct = currentRound.number;
-        app.innerHTML = `
-          <h2>Tulos</h2>
-          <p>Oikea numero oli <strong>${correct}</strong></p>
-          <ul>
-            ${players.map(p => `<li>${p}: ${points[p] || 0} pistettä</li>`).join('')}
-          </ul>
-          ${host === state.you ? '<button onclick="nextRound()">Uusi kierros</button>' : ''}
-        `;
-      } else if (screen === 'leaderboard') {
-        const sorted = [...players].sort((a, b) => (points[b] || 0) - (points[a] || 0));
-        app.innerHTML = `
-          <h2>Voittaja!</h2>
-          <ul class="leaderboard">
-            ${sorted.map(p => `<li>${p}: ${points[p] || 0} pistettä</li>`).join('')}
-          </ul>
-          ${host === state.you ? '<button onclick="resetGame()">Odota uusi peli</button>' : ''}
-        `;
-      }
+const categories = [
+  "Automerkit",
+  "Eläimet",
+  "Maat",
+  "Jalkapallojoukkueet",
+  "Ruokalajit",
+  "Hajusteet",
+  "Tunteet",
+  "Elokuvat",
+  "Julkkikset",
+  "Teknologiat",
+  "Internet-ilmiöt",
+  "Historialliset tapahtumat",
+  "Värit",
+  "Ammatit",
+  "TV-ohjelmat",
+  "Soittimet",
+  "Säätilat",
+  "Karkit",
+  "Kaupunki vs. Maaseutu -paikat",
+  "Brändit",
+  "Kännykät",
+  "Autot",
+  "Rikolliset",
+  "Huumorin muodot",
+  "Mainokset",
+  "Vuodenajat"
+];
+
+app.use(express.static("public"));
+
+io.on("connection", (socket) => {
+  socket.on("join", (name) => {
+    if (!players.find((p) => p.id === socket.id)) {
+      players.push({ id: socket.id, name, score: 0 });
+      if (!gameState.hostId) gameState.hostId = socket.id;
     }
+    io.emit("players", players);
+  });
 
-    function join() {
-      const input = document.getElementById('nameInput');
-      const name = input.value.trim();
-      if (!name || state.players.includes(name)) return;
-      state.players.push(name);
-      state.you = name;
-      state.points[name] = 0;
-      if (!state.host) state.host = name;
-      render();
+  socket.on("startGame", () => {
+    gameState.started = true;
+    startRound();
+  });
+
+  socket.on("submitClue", ({ clue }) => {
+    gameState.clues[socket.id] = clue;
+    if (Object.keys(gameState.clues).length === players.length - 1) {
+      io.to(gameState.guesserId).emit("yourTurn", {
+        clues: gameState.clues,
+        category: gameState.category
+      });
     }
+  });
 
-    function startGame() {
-      nextRound();
+  socket.on("submitGuess", ({ guess }) => {
+    gameState.guess = guess;
+    const diff = Math.abs(gameState.guess - gameState.targetNumber);
+    const guesser = players.find((p) => p.id === gameState.guesserId);
+
+    if (diff === 0) guesser.score += 5;
+    else guesser.score += 0;
+
+    players.forEach((p) => {
+      if (p.id !== gameState.guesserId) p.score += 2;
+    });
+
+    io.emit("roundResult", {
+      correct: gameState.targetNumber,
+      guess: gameState.guess,
+      players
+    });
+
+    const winner = players.find((p) => p.score >= gameState.maxPoints);
+    if (winner) {
+      gameState.leaderboardVisible = true;
+      io.emit("leaderboard", players.sort((a, b) => b.score - a.score));
     }
+  });
 
-    function nextRound() {
-      const guesser = state.players[Math.floor(Math.random() * state.players.length)];
-      const number = Math.floor(Math.random() * 11);
-      const category = state.categories[Math.floor(Math.random() * state.categories.length)];
-
-      state.currentRound = { guesser, number, category };
-      state.hints = {};
-
-      if (state.you === guesser) {
-        state.screen = 'guess';
-      } else {
-        state.screen = 'hint';
-      }
-      render();
+  socket.on("nextRound", () => {
+    if (gameState.leaderboardVisible) {
+      gameState.leaderboardVisible = false;
+      players.forEach((p) => (p.score = 0));
     }
+    startRound();
+  });
 
-    function submitHint() {
-      const input = document.getElementById('hintInput');
-      const hint = input.value.trim();
-      if (!hint) return;
-      state.hints[state.you] = hint;
-
-      if (Object.keys(state.hints).length === state.players.length - 1) {
-        state.screen = 'guess';
-      }
-      render();
+  socket.on("disconnect", () => {
+    players = players.filter((p) => p.id !== socket.id);
+    if (socket.id === gameState.hostId && players.length > 0) {
+      gameState.hostId = players[0].id;
     }
+    io.emit("players", players);
+  });
+});
 
-    function submitGuess() {
-      const input = document.getElementById('guessInput');
-      const guess = parseInt(input.value);
-      if (isNaN(guess)) return;
+function startRound() {
+  gameState.round++;
+  gameState.clues = {};
+  gameState.guess = null;
+  gameState.targetNumber = Math.floor(Math.random() * 11);
+  gameState.category = categories[Math.floor(Math.random() * categories.length)];
+  gameState.guesserId = players[Math.floor(Math.random() * players.length)].id;
 
-      const actual = state.currentRound.number;
-      if (guess === actual) {
-        state.points[state.currentRound.guesser] += 5;
-      }
-      for (const p of state.otherPlayers) {
-        state.points[p] += 2;
-      }
-
-      if (Object.values(state.points).some(p => p >= state.maxPoints)) {
-        state.screen = 'leaderboard';
-      } else {
-        state.screen = 'result';
-      }
-      render();
+  players.forEach((p) => {
+    if (p.id === gameState.guesserId) {
+      io.to(p.id).emit("waitTurn", { message: "Sinä olet arvaaja!" });
+    } else {
+      io.to(p.id).emit("giveClue", {
+        number: gameState.targetNumber,
+        category: gameState.category
+      });
     }
+  });
+}
 
-    function resetGame() {
-      for (const p of state.players) state.points[p] = 0;
-      state.screen = 'join';
-      render();
-    }
-
-    render();
-  </script>
-</body>
-</html>
+server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
