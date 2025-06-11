@@ -2,158 +2,218 @@
 <html lang="fi">
 <head>
   <meta charset="UTF-8" />
-  <title>Wavelength Moninpeli</title>
+  <title>Wavelength</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
-      margin: 0; padding: 0;
+      margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: radial-gradient(circle at top, #8ec5fc 0%, #e0c3fc 100%);
+      background: linear-gradient(to right, #8ec5fc, #e0c3fc);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
     }
     .container {
       background: white;
+      padding: 20px;
       border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-      padding: 30px;
-      max-width: 700px;
+      max-width: 500px;
       width: 100%;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    h2, h3 {
       text-align: center;
+    }
+    input, button, select {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
     }
     button {
       background: linear-gradient(90deg, #ff8a00, #e52e71);
       color: white;
-      padding: 10px 20px;
       border: none;
-      border-radius: 12px;
       cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.3s;
-      margin-top: 15px;
     }
     button:hover {
-      background: linear-gradient(90deg, #e52e71, #ff8a00);
+      opacity: 0.9;
     }
-    input {
-      padding: 10px;
-      width: 70%;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-      margin-top: 15px;
+    .hidden {
+      display: none;
     }
-    ul {
-      list-style: none; padding: 0; margin-top: 10px; text-align: left;
-      max-height: 150px; overflow-y: auto;
+    .player-list, .hint-list, .leaderboard {
+      list-style: none;
+      padding: 0;
     }
-    li {
-      margin: 5px 0; font-weight: 600;
+    .player-list li, .hint-list li, .leaderboard li {
+      padding: 5px;
+      border-bottom: 1px solid #ddd;
     }
-    #countdown {
-      font-size: 3rem;
+    .highlight {
       font-weight: bold;
-      margin: 20px 0;
       color: #e52e71;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-
-    <div id="join-screen">
-      <h2>Liity peliin</h2>
-      <input type="text" id="player-name" placeholder="Kirjoita nimesi" />
-      <br/>
-      <button onclick="joinGame()">Liity</button>
-
-      <h3>Liittyneet pelaajat:</h3>
-      <ul id="players-list"></ul>
-
-      <button id="start-game-btn" class="hidden" onclick="startCountdown()">Aloita peli</button>
-    </div>
-
-    <div id="countdown-screen" class="hidden">
-      <div id="countdown">3</div>
-      <div>Peli alkaa!</div>
-    </div>
-
-    <div id="game-screen" class="hidden">
-      <h1>Wavelength - Peli käynnissä</h1>
-      <div id="game-content">
-        <!-- Pelin sisältö tähän -->
-      </div>
-    </div>
-
+  <div class="container" id="app">
+    <!-- Kaikki näkymät käsitellään JavaScriptillä -->
   </div>
 
-<script>
-  const players = [];
-  const playersList = document.getElementById("players-list");
-  const startGameBtn = document.getElementById("start-game-btn");
-
-  function joinGame() {
-    const input = document.getElementById("player-name");
-    const name = input.value.trim();
-    if (!name) {
-      alert("Kirjoita nimesi!");
-      return;
-    }
-    if (players.includes(name)) {
-      alert("Nimi on jo käytössä.");
-      return;
-    }
-    players.push(name);
-    input.value = "";
-    renderPlayers();
-    checkStartButton();
-  }
-
-  function renderPlayers() {
-    playersList.innerHTML = "";
-    players.forEach((p, i) => {
-      const li = document.createElement("li");
-      li.textContent = p + (i === 0 ? " (host)" : "");
-      playersList.appendChild(li);
-    });
-  }
-
-  function checkStartButton() {
-    // Salli aloittaa jo yhdellä pelaajalla
-    if (players.length >= 1) {
-      startGameBtn.classList.remove("hidden");
-    } else {
-      startGameBtn.classList.add("hidden");
-    }
-  }
-
-  // Lähtölaskenta ja pelin aloitus
-  function startCountdown() {
-    document.getElementById("join-screen").classList.add("hidden");
-    document.getElementById("countdown-screen").classList.remove("hidden");
-
-    let count = 3;
-    const countdownEl = document.getElementById("countdown");
-    countdownEl.textContent = count;
-
-    const interval = setInterval(() => {
-      count--;
-      if (count === 0) {
-        clearInterval(interval);
-        // Piilota lähtölaskenta ja näytä pelinäkymä
-        document.getElementById("countdown-screen").classList.add("hidden");
-        document.getElementById("game-screen").classList.remove("hidden");
-        startGame(); // käynnistä pelin logiikka
-      } else {
-        countdownEl.textContent = count;
+  <script>
+    // Koko peli tallennetaan yhteen olioon (data + logiikka)
+    const state = {
+      players: [],
+      host: null,
+      screen: 'join',
+      currentRound: null,
+      hints: {},
+      points: {},
+      maxPoints: 30,
+      categories: [
+        "Autot", "Eläimet", "Lomakohteet", "Ruokalajit", "Hajuvedet",
+        "Värit", "Kännykät", "Kaupungit", "Maat", "Ammatit",
+        "Brändit", "Säät", "Tuntemukset", "Internet-meemit", "Vuodenajat",
+        "TV-sarjat", "Joukkueet", "Tapahtumat", "Luonteenpiirteet", "Tuoksut"
+      ],
+      get otherPlayers() {
+        return this.players.filter(p => p !== this.currentRound?.guesser);
       }
-    }, 1000);
-  }
+    };
 
-  function startGame() {
-    const gameContent = document.getElementById("game-content");
-    gameContent.innerHTML = "<p>Peli alkoi! Tässä voi nyt tehdä pelilogiikan.</p>";
-    console.log("Peli käynnistyy pelaajilla:", players);
-  }
-</script>
+    const app = document.getElementById('app');
+
+    function render() {
+      const { screen, players, host, currentRound, hints, points, maxPoints } = state;
+
+      if (screen === 'join') {
+        app.innerHTML = `
+          <h2>Liity peliin</h2>
+          <input id="nameInput" placeholder="Kirjoita nimesi" />
+          <button onclick="join()">Liity</button>
+          <h3>Pelaajat</h3>
+          <ul class="player-list">
+            ${players.map(p => `<li>${p}${p === host ? ' (host)' : ''}</li>`).join('')}
+          </ul>
+          ${players[0] === state.you ? '<button onclick="startGame()">Aloita peli</button>' : ''}
+        `;
+      } else if (screen === 'hint') {
+        const category = currentRound.category;
+        const number = currentRound.number;
+        app.innerHTML = `
+          <h2>Kategoria: <span class="highlight">${category}</span></h2>
+          <h3>Anna vihje numerolle <span class="highlight" style="font-size: 1.5em;">${number}</span></h3>
+          <input id="hintInput" placeholder="Kirjoita vihjeesi" />
+          <button onclick="submitHint()">Lähetä vihje</button>
+        `;
+      } else if (screen === 'guess') {
+        app.innerHTML = `
+          <h2>Arvaa numero!</h2>
+          <ul class="hint-list">
+            ${Object.entries(hints).map(([name, hint]) => `<li><strong>${name}:</strong> ${hint}</li>`).join('')}
+          </ul>
+          <input id="guessInput" type="number" min="0" max="10" placeholder="Arvauksesi (0-10)" />
+          <button onclick="submitGuess()">Arvaa</button>
+        `;
+      } else if (screen === 'result') {
+        const correct = currentRound.number;
+        app.innerHTML = `
+          <h2>Tulos</h2>
+          <p>Oikea numero oli <strong>${correct}</strong></p>
+          <ul>
+            ${players.map(p => `<li>${p}: ${points[p] || 0} pistettä</li>`).join('')}
+          </ul>
+          ${host === state.you ? '<button onclick="nextRound()">Uusi kierros</button>' : ''}
+        `;
+      } else if (screen === 'leaderboard') {
+        const sorted = [...players].sort((a, b) => (points[b] || 0) - (points[a] || 0));
+        app.innerHTML = `
+          <h2>Voittaja!</h2>
+          <ul class="leaderboard">
+            ${sorted.map(p => `<li>${p}: ${points[p] || 0} pistettä</li>`).join('')}
+          </ul>
+          ${host === state.you ? '<button onclick="resetGame()">Odota uusi peli</button>' : ''}
+        `;
+      }
+    }
+
+    function join() {
+      const input = document.getElementById('nameInput');
+      const name = input.value.trim();
+      if (!name || state.players.includes(name)) return;
+      state.players.push(name);
+      state.you = name;
+      state.points[name] = 0;
+      if (!state.host) state.host = name;
+      render();
+    }
+
+    function startGame() {
+      nextRound();
+    }
+
+    function nextRound() {
+      const guesser = state.players[Math.floor(Math.random() * state.players.length)];
+      const number = Math.floor(Math.random() * 11);
+      const category = state.categories[Math.floor(Math.random() * state.categories.length)];
+
+      state.currentRound = { guesser, number, category };
+      state.hints = {};
+
+      if (state.you === guesser) {
+        state.screen = 'guess';
+      } else {
+        state.screen = 'hint';
+      }
+      render();
+    }
+
+    function submitHint() {
+      const input = document.getElementById('hintInput');
+      const hint = input.value.trim();
+      if (!hint) return;
+      state.hints[state.you] = hint;
+
+      if (Object.keys(state.hints).length === state.players.length - 1) {
+        state.screen = 'guess';
+      }
+      render();
+    }
+
+    function submitGuess() {
+      const input = document.getElementById('guessInput');
+      const guess = parseInt(input.value);
+      if (isNaN(guess)) return;
+
+      const actual = state.currentRound.number;
+      if (guess === actual) {
+        state.points[state.currentRound.guesser] += 5;
+      }
+      for (const p of state.otherPlayers) {
+        state.points[p] += 2;
+      }
+
+      if (Object.values(state.points).some(p => p >= state.maxPoints)) {
+        state.screen = 'leaderboard';
+      } else {
+        state.screen = 'result';
+      }
+      render();
+    }
+
+    function resetGame() {
+      for (const p of state.players) state.points[p] = 0;
+      state.screen = 'join';
+      render();
+    }
+
+    render();
+  </script>
 </body>
 </html>
